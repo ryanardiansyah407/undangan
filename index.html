@@ -49,7 +49,7 @@ button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-w
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 dialog{border:0;border-radius:10px;width:min(640px,94vw);background:var(--panel);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.55)}
-details.card{margin-top:14px}summary{cursor:pointer;font-weight:600}.sy{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}#sst{color:var(--mute);margin-top:8px;font-size:13px}
+.bd{background:var(--bad);color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;white-space:nowrap}.dn{min-width:600px}details.card{margin-top:14px}summary{cursor:pointer;font-weight:600}.sy{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}#sst{color:var(--mute);margin-top:8px;font-size:13px}
 textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -76,6 +76,18 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
  <div id="diff"></div>
 </div>
 
+<div class="card" style="margin-top:14px">
+ <b style="font-size:18px">Dana terkumpul</b>
+ <div class="sum" style="margin-top:10px">
+  <div><span>Terkumpul</span><b id="dTot"></b></div>
+  <div><span id="dGapL">Kekurangan dana</span><b id="dGap"></b></div>
+ </div>
+ <div class="bar" id="dBar"><i></i></div>
+ <div class="acts"><button class="p" data-act="shot">Tambah dari screenshot transfer</button><button data-act="ad">+ Catat manual</button></div>
+ <input id="shot" type="file" accept="image/*" multiple hidden>
+ <div id="dst" role="status" style="color:var(--mute);font-size:13px;margin-top:8px">Screenshot dibaca langsung di browser. Selalu periksa hasilnya sebelum dipakai.</div>
+ <div class="tw" style="margin-top:8px"><table class="dn"><thead><tr><th style="width:140px">Tanggal</th><th>Dari</th><th style="width:150px">Nominal</th><th>Catatan</th><th></th></tr></thead><tbody id="dBody"></tbody></table></div>
+</div>
 <details class="card"><summary>Simpan otomatis ke Google Sheets</summary>
  <div class="sy"><div><label class="f" for="sUrl">URL Apps Script (akhiran /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
  <div><label class="f" for="sKey">Kata sandi</label><input id="sKey" type="password" autocomplete="off"></div></div>
@@ -104,7 +116,7 @@ const uid=()=>Math.random().toString(36).slice(2,8);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rp=n=>'Rp '+Math.round(n).toLocaleString('id-ID');
 const it=(u,pt,sat)=>({id:uid(),u,vol:1,sat:sat||'paket',harga:0,bayar:0,pt:!!pt});
-function seed(){return{target:0,tamu:100,cad:5,cats:[
+function seed(){return{target:0,tamu:100,cad:5,dana:[],cats:[
  {id:uid(),n:'Tempat & katering',items:[it('Sewa gedung / venue'),it('Katering',1,'porsi'),it('Sound system')]},
  {id:uid(),n:'Dekorasi',items:[it('Pelaminan & dekorasi'),it('Bunga')]},
  {id:uid(),n:'Busana & rias',items:[it('Busana pengantin'),it('Rias pengantin (MUA)'),it('Busana keluarga')]},
@@ -114,7 +126,7 @@ function seed(){return{target:0,tamu:100,cad:5,cats:[
  {id:uid(),n:'Mahar & seserahan',items:[it('Mahar'),it('Seserahan')]},
  {id:uid(),n:'Administrasi & lain-lain',items:[it('Administrasi (KUA / penghulu)'),it('Transportasi'),it('Konsumsi panitia')]}]}}
 let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
-if(!S||!Array.isArray(S.cats))S=seed();
+if(!S||!Array.isArray(S.cats))S=seed();S.dana=S.dana||[];
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}queuePush()};
 const find=(c,i)=>{const C=S.cats.find(x=>x.id===c);return i?C.items.find(x=>x.id===i):C};
 
@@ -133,7 +145,7 @@ function render(){
  $('#cats').innerHTML=S.cats.map(c=>`<section class="cat"><div class="ch"><input class="cn" data-cn="${c.id}" value="${esc(c.n)}" aria-label="Nama kategori"><span class="ctot">Subtotal <b id="ct_${c.id}"></b></span><button class="x" data-act="dc" data-c="${c.id}" aria-label="Hapus kategori">✕</button></div>
  <div class="tw"><table><thead><tr><th>Uraian</th><th>Vol</th><th>Satuan</th><th>Harga satuan</th><th style="text-align:right">Jumlah</th><th>Dibayar</th><th style="text-align:right">Sisa</th><th></th></tr></thead><tbody>${c.items.map(i=>row(c,i)).join('')}</tbody></table></div>
  <button class="add" data-act="ai" data-c="${c.id}">+ Tambah item</button></section>`).join('');
- calc();
+ renderDana();calc();
 }
 const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t};
 function calc(){
@@ -142,6 +154,9 @@ function calc(){
   set(`j_${c.id}_${i.id}`,rp(j));set(`s_${c.id}_${i.id}`,rp(j-i.bayar))});set('ct_'+c.id,rp(ct));sub+=ct});
  const cad=sub*S.cad/100,tot=sub+cad;
  set('sSub',rp(sub));set('sCad',rp(cad));set('sTot',rp(tot));set('sPaid',rp(paid));set('sRem',rp(tot-paid));
+ const got=S.dana.reduce((a,x)=>a+x.nom,0),gap=tot-got;
+ set('dTot',rp(got));set('dGap',rp(Math.abs(gap)));set('dGapL',gap>0?'Kekurangan dana':'Kelebihan dana');
+ $('#dBar i').style.width=(tot>0?Math.min(100,got/tot*100):0)+'%';
  const T=S.target,over=T>0&&tot>T;
  $('#bar').classList.toggle('over',over);
  $('#bar i').style.width=(T>0?Math.min(100,tot/T*100):0)+'%';
@@ -151,6 +166,7 @@ function calc(){
 }
 document.addEventListener('input',e=>{
  const t=e.target,d=t.dataset;
+ if(d.df){const x=S.dana.find(y=>y.id===d.d);x[d.df]=d.df==='nom'?Math.max(0,+t.value||0):t.value;x.cek=false;const b=t.closest('tr').querySelector('.bd');if(b)b.remove();calc();save();return}
  if(d.cn){find(d.cn).n=t.value;save();return}
  if(d.f){const x=find(d.c,d.i);
   if(d.f==='pt'){x.pt=t.checked;render()}
@@ -164,13 +180,18 @@ document.addEventListener('input',e=>{
 });
 function rows(){const r=[['Kategori','Uraian','Volume','Satuan','Harga satuan','Jumlah','Dibayar','Sisa']];
  S.cats.forEach(c=>c.items.forEach(i=>{const v=i.pt?S.tamu:i.vol,j=v*i.harga;r.push([c.n,i.u,v,i.sat,i.harga,j,i.bayar,j-i.bayar])}));
- const t=calc();r.push([],['','Dana tak terduga ('+S.cad+'%)','','','',Math.round(t.cad)],['','TOTAL RENCANA','','','',Math.round(t.tot),t.paid,Math.round(t.tot-t.paid)]);return r}
+ const t=calc();r.push([],['','Dana tak terduga ('+S.cad+'%)','','','',Math.round(t.cad)],['','TOTAL RENCANA','','','',Math.round(t.tot),t.paid,Math.round(t.tot-t.paid)]);
+ const gt=S.dana.reduce((a,x)=>a+x.nom,0);r.push([],['DANA TERKUMPUL'],['Tanggal','Dari','Catatan','','','Nominal']);
+ S.dana.forEach(x=>r.push([x.tgl,x.dari,x.cat,'','',x.nom]));r.push(['','TOTAL TERKUMPUL','','','',gt],['','KEKURANGAN DANA','','','',Math.round(t.tot-gt)]);return r}
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,c=b.dataset.c;
  if(a==='ai'){find(c).items.push(it('Item baru'));render()}
  else if(a==='di'){const C=find(c);C.items=C.items.filter(x=>x.id!==b.dataset.i);render()}
  else if(a==='dc'){if(confirm('Hapus kategori ini beserta isinya?')){S.cats=S.cats.filter(x=>x.id!==c);render()}}
+ else if(a==='ad'){S.dana.push({id:uid(),tgl:today(),dari:'',nom:0,cat:'',cek:false});render()}
+ else if(a==='dd'){S.dana=S.dana.filter(x=>x.id!==b.dataset.d);render()}
+ else if(a==='shot'){$('#shot').click()}
  else if(a==='ac'){S.cats.push({id:uid(),n:'Kategori baru',items:[it('Item baru')]});render()}
  else if(a==='reset'){if(confirm('Hapus semua data dan mulai ulang?')){S=seed();init();render()}}
  else if(a==='copy'){$('#tsv').value=rows().map(r=>r.join('\t')).join('\n');$('#dlg').showModal();$('#tsv').select()}
@@ -184,6 +205,37 @@ $('#cl').onclick=()=>{$('#dlg').close();$('#cp').textContent='Salin'};
 function init(){$('#target').value=S.target||'';$('#tamu').value=S.tamu;$('#cad').value=S.cad}
 init();render();
 
+/* ---- dana terkumpul + baca screenshot ---- */
+const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
+function renderDana(){
+ $('#dBody').innerHTML=S.dana.map(x=>{const a=`data-d="${x.id}"`;return `<tr><td><input type="date" ${a} data-df="tgl" value="${esc(x.tgl)}" aria-label="Tanggal"></td>
+ <td><input ${a} data-df="dari" value="${esc(x.dari)}" placeholder="Nama pengirim" aria-label="Dari"></td>
+ <td><input type="number" min="0" inputmode="numeric" ${a} data-df="nom" value="${x.nom}" aria-label="Nominal"></td>
+ <td><input ${a} data-df="cat" value="${esc(x.cat)}" aria-label="Catatan"></td>
+ <td style="white-space:nowrap">${x.cek?'<span class="bd">periksa</span> ':''}<button class="x" data-act="dd" ${a} aria-label="Hapus">✕</button></td></tr>`}).join('')}
+const BL={jan:1,feb:2,mar:3,apr:4,mei:5,may:5,jun:6,jul:7,agu:8,agt:8,aug:8,sep:9,okt:10,oct:10,nov:11,des:12,dec:12};
+const num=s=>{s=s.replace(/[^\d.,]/g,'').replace(/[.,]$/,'');if(/[.,]\d{2}$/.test(s))s=s.slice(0,-3);return +s.replace(/[.,]/g,'')||0};
+function parseTf(t){
+ const pr=[...t.matchAll(/(?:Rp|IDR)\.?\s*(\d[\d.,]*)/gi)].map(m=>num(m[1])).filter(n=>n>=1000);
+ const nom=pr.length?pr[0]:Math.max(0,...[...t.matchAll(/\b\d{1,3}(?:[.,]\d{3})+(?:[.,]\d{2})?\b/g)].map(m=>num(m[0])));
+ let tgl=today(),m=t.match(/(\d{1,2})\s+([A-Za-z]{3,})\.?,?\s+(\d{4})/);
+ if(m&&BL[m[2].slice(0,3).toLowerCase()])tgl=`${m[3]}-${String(BL[m[2].slice(0,3).toLowerCase()]).padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+ else if(m=t.match(/(\d{1,2})[\/-](\d{1,2})[\/-](\d{4})/))tgl=`${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+ if(isNaN(Date.parse(tgl)))tgl=today();
+ m=t.match(/(?:dari|pengirim|sumber(?: dana)?|from)\s*[:\-]?\s*\n?\s*([^\n]{3,40})/i);
+ return{nom,tgl,dari:m?m[1].trim():''};
+}
+let tess;const loadTess=()=>tess||(tess=new Promise((ok,no)=>{const s=document.createElement('script');s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';s.onload=ok;s.onerror=()=>{tess=null;no(new Error('load'))};document.head.append(s)}));
+const dst=t=>{$('#dst').textContent=t};
+$('#shot').onchange=async e=>{
+ const fs=[...e.target.files];e.target.value='';let n=0;
+ for(const f of fs){dst(`Membaca screenshot ${++n} dari ${fs.length}… (pertama kali agak lama, perlu mengunduh data bahasa)`);
+  try{await loadTess();const r=await Tesseract.recognize(f,'ind');const p=parseTf(r.data.text);
+   S.dana.push({id:uid(),tgl:p.tgl,dari:p.dari,nom:p.nom,cat:'dari screenshot',cek:true})}
+  catch(err){dst('Gagal membaca '+f.name+'. Pastikan terhubung ke internet dan halaman ini dibuka dari hosting sendiri, atau catat manual.');render();save();return}}
+ dst(fs.length+' screenshot dibaca. Periksa nominal, tanggal, dan nama yang bertanda "periksa".');render();save();
+};
+
 /* ---- sinkron Google Sheets (Apps Script) ---- */
 let SY={},tm;try{SY=JSON.parse(localStorage.getItem('rab-sync'))||{}}catch(e){}
 const stat=t=>{$('#sst').textContent=t};
@@ -194,7 +246,7 @@ async function push(){try{
  const j=await r.json();stat(j.ok?'Tersimpan ke spreadsheet pukul '+jam():'Gagal: kata sandi salah.')
 }catch(e){stat('Gagal tersambung. Cek URL dan koneksi internet.')}}
 const pull=async()=>(await fetch(SY.url+'?key='+encodeURIComponent(SY.key))).json();
-function adopt(st){S=st;try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}init();render()}
+function adopt(st){S=st;S.dana=S.dana||[];try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}init();render()}
 $('#conn').onclick=async()=>{
  const url=$('#sUrl').value.trim(),key=$('#sKey').value;
  if(!/^https:\/\/script\.google\.com\//.test(url)){stat('URL harus diawali https://script.google.com/');return}
