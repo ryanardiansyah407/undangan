@@ -12,7 +12,10 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 :root[data-theme="dark"]{--bg:#12161f;--panel:#1b212d;--ink:#e8ecf4;--mute:#97a1b5;--line:#2d3647;--acc:#8c9bff;--accfg:#10142e;--bad:#ff8a7a;--ok:#5fd394}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 15px/1.5 "Bricolage Grotesque",system-ui,sans-serif}
-main{max-width:1020px;margin:0 auto;padding:22px 14px 56px}
+main{max-width:1020px;margin:0 auto;padding:22px 14px 110px}
+.savebar{position:fixed;left:0;right:0;bottom:0;z-index:20;background:var(--panel);border-top:1px solid var(--line);padding:10px 14px calc(10px + env(safe-area-inset-bottom,0px))}
+.savebar .in{max-width:1020px;margin:0 auto;display:flex;gap:12px;align-items:center;justify-content:space-between}
+#svs{font-size:13px}.savebar button{min-width:110px;padding:10px 18px}
 h1{font-size:clamp(30px,6vw,52px);line-height:1;margin:6px 0 6px;font-weight:800;letter-spacing:-.03em}
 .sub{color:var(--mute);margin:0 0 20px}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
@@ -58,9 +61,9 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
 <body>
 <main>
 <h1>RAB biaya nikah</h1>
-<p class="sub">Isi harga tiap item, total dan sisa pembayaran dihitung otomatis. Data tersimpan di browser ini.</p>
+<p class="sub">Isi harga tiap item, total dan sisa pembayaran dihitung otomatis. Klik tombol Simpan di bagian bawah layar setelah selesai mengubah.</p>
 
-<details class="card"><summary>Simpan otomatis ke Google Sheets</summary>
+<details class="card"><summary>Sambungkan ke Google Sheets</summary>
  <div class="sy"><div><label class="f" for="sUrl">URL Apps Script (akhiran /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
  <div><label class="f" for="sKey">Kata sandi</label><input id="sKey" type="password" autocomplete="off"></div></div>
  <div class="acts"><button class="p" id="conn">Hubungkan</button><button id="disc">Putuskan</button><button id="lnk">Salin tautan sambungan</button></div>
@@ -125,6 +128,7 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
 </div>
 </main>
 
+<div class="savebar"><div class="in"><span id="svs" role="status"></span><button class="p" id="save">Simpan</button></div></div>
 <dialog id="dlg">
  <p style="margin-top:0"><b>Tempel ke Google Sheets atau Excel</b><br><span class="sub">Klik sel A1 di spreadsheet, lalu tempel (Ctrl+V). Kolom akan terpisah otomatis.</span></p>
  <textarea id="tsv" readonly></textarea>
@@ -228,7 +232,7 @@ document.addEventListener('click',e=>{
  else if(a==='csv'){const q=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
   const blob=new Blob(['\ufeff'+rows().map(r=>r.map(q).join(',')).join('\r\n')],{type:'text/csv'});
   const l=document.createElement('a');l.href=URL.createObjectURL(blob);l.download='rab-nikah.csv';document.body.append(l);l.click();l.remove()}
- save();
+ if(!['copy','csv','shot'].includes(a))save();
 });
 $('#cp').onclick=async()=>{const t=$('#tsv');t.select();try{await navigator.clipboard.writeText(t.value)}catch(e){document.execCommand('copy')}$('#cp').textContent='Tersalin'};
 $('#cl').onclick=()=>{$('#dlg').close();$('#cp').textContent='Salin'};
@@ -285,15 +289,22 @@ $('#shot').onchange=async e=>{
 /* ---- sinkron Google Sheets (Apps Script) ---- */
 const DEFAULT_URL='https://script.google.com/macros/s/AKfycbyJrn-06rsdn2JRbszNUmpePlwiP0p58SgLHp6kbRrApZhNqfcjVaw4kwf33RbbqIDb/exec';
 let SY={},tm;try{SY=JSON.parse(localStorage.getItem('rab-sync'))||{}}catch(e){}
+let dirty=false;try{dirty=localStorage.getItem('rab-dirty')==='1'}catch(e){}
+function setDirty(v){dirty=v;try{localStorage.setItem('rab-dirty',v?'1':'0')}catch(e){}paintBar()}
+function paintBar(){const s=$('#svs');s.textContent=SY.url?(dirty?'Ada perubahan yang belum disimpan ke spreadsheet':'Semua perubahan tersimpan di spreadsheet'):'Tersimpan di browser ini. Hubungkan Google Sheets untuk menyimpan ke spreadsheet.';s.style.color=SY.url&&dirty?'var(--bad)':'var(--mute)'}
+$('#save').onclick=async()=>{const b=$('#save');try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}
+ if(!SY.url){$('#svs').textContent='Tersimpan di browser ini ✓';return}
+ b.disabled=true;b.textContent='Menyimpan…';await push();b.disabled=false;b.textContent='Simpan'};
+addEventListener('beforeunload',e=>{if(dirty&&SY.url){e.preventDefault();e.returnValue=''}});
 const stat=t=>{$('#sst').textContent=t};
 const jam=()=>new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
-function queuePush(){if(!SY.url)return;clearTimeout(tm);stat('Menyimpan…');tm=setTimeout(push,1200)}
+function queuePush(){setDirty(true)}
 async function push(){try{
  const r=await fetch(SY.url,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify({key:SY.key,state:S,rows:rows()})});
- const j=await r.json();stat(j.ok?'Tersimpan ke spreadsheet pukul '+jam():'Gagal: kata sandi salah.')
-}catch(e){stat('Gagal tersambung. Cek URL dan koneksi internet.')}}
+ const j=await r.json();if(j.ok){setDirty(false);stat('Tersimpan ke spreadsheet pukul '+jam())}else stat('Gagal: kata sandi salah. Perubahan belum tersimpan.')
+}catch(e){stat('Gagal tersambung. Perubahan belum tersimpan, coba klik Simpan lagi.')}}
 const pull=async()=>(await fetch(SY.url+'?key='+encodeURIComponent(SY.key))).json();
-function adopt(st){S=st;fix(S);try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}init();render()}
+function adopt(st){S=st;fix(S);try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}setDirty(false);init();render()}
 $('#conn').onclick=async()=>{
  const url=$('#sUrl').value.trim(),key=$('#sKey').value;
  if(!/^https:\/\/script\.google\.com\//.test(url)){stat('URL harus diawali https://script.google.com/');return}
@@ -305,15 +316,17 @@ $('#conn').onclick=async()=>{
   else await push();
  }catch(e){SY={};stat('Gagal tersambung. Pastikan URL benar dan akses diatur "Anyone".')}
 };
-$('#disc').onclick=()=>{SY={};try{localStorage.removeItem('rab-sync')}catch(e){}stat('Terputus. Data hanya tersimpan di browser ini.')};
+$('#disc').onclick=()=>{SY={};try{localStorage.removeItem('rab-sync')}catch(e){}stat('Terputus. Data hanya tersimpan di browser ini.');paintBar()};
 const hm=location.hash.match(/^#s=(.+)$/);
 if(hm){try{const o=JSON.parse(decodeURIComponent(atob(hm[1])));if(o.u){SY={url:o.u,key:o.k||''};localStorage.setItem('rab-sync',JSON.stringify(SY))}}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
 $('#lnk').onclick=async()=>{if(!SY.url){stat('Hubungkan dulu, baru tautannya bisa disalin.');return}
  const l=location.origin+location.pathname+'#s='+btoa(encodeURIComponent(JSON.stringify({u:SY.url,k:SY.key})));
  try{await navigator.clipboard.writeText(l);stat('Tautan disalin. Buka di perangkat lain untuk tersambung otomatis. Jangan dibagikan ke sembarang orang.')}catch(e){prompt('Salin tautan ini:',l)}};
 $('#sUrl').value=DEFAULT_URL;
-if(SY.url){$('#sUrl').value=SY.url;$('#sKey').value=SY.key||'';stat('Memuat dari spreadsheet…');
+if(SY.url&&dirty){$('#sUrl').value=SY.url;$('#sKey').value=SY.key||'';stat('Ada perubahan yang belum disimpan ke spreadsheet. Klik Simpan.')}
+else if(SY.url){$('#sUrl').value=SY.url;$('#sKey').value=SY.key||'';stat('Memuat dari spreadsheet…');
  pull().then(j=>{if(j.state&&j.state.cats){adopt(j.state);stat('Terhubung. Data dimuat dari spreadsheet pukul '+jam())}else stat('Terhubung.')}).catch(()=>stat('Gagal memuat dari spreadsheet.'))}
+paintBar();
 </script>
 </body>
 </html>
