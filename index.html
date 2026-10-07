@@ -49,6 +49,7 @@ button.p{background:var(--acc);color:var(--accfg);border-color:var(--acc);font-w
 .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}
 dialog{border:0;border-radius:10px;width:min(640px,94vw);background:var(--panel);color:var(--ink)}
 dialog::backdrop{background:rgba(0,0,0,.55)}
+[hidden]{display:none!important}.tabs{display:flex;gap:6px;margin:16px 0 0;border-bottom:1px solid var(--line);overflow-x:auto}.tabs button{border:0;border-bottom:3px solid transparent;border-radius:0;padding:10px 14px;font-weight:600;color:var(--mute);white-space:nowrap}.tabs button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--acc)}.tab{padding-top:14px}select{width:100%;padding:7px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink);font:inherit}
 .bd{background:var(--bad);color:#fff;border-radius:4px;padding:1px 6px;font-size:11px;white-space:nowrap}.dn{min-width:600px}details.card{margin-top:14px}summary{cursor:pointer;font-weight:600}.sy{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px;margin-top:10px}#sst{color:var(--mute);margin-top:8px;font-size:13px}
 textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -59,6 +60,13 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
 <h1>RAB biaya nikah</h1>
 <p class="sub">Isi harga tiap item, total dan sisa pembayaran dihitung otomatis. Data tersimpan di browser ini.</p>
 
+<details class="card"><summary>Simpan otomatis ke Google Sheets</summary>
+ <div class="sy"><div><label class="f" for="sUrl">URL Apps Script (akhiran /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
+ <div><label class="f" for="sKey">Kata sandi</label><input id="sKey" type="password" autocomplete="off"></div></div>
+ <div class="acts"><button class="p" id="conn">Hubungkan</button><button id="disc">Putuskan</button><button id="lnk">Salin tautan sambungan</button></div>
+ <div id="sst" role="status">Belum terhubung. Perubahan hanya tersimpan di browser ini.</div></details>
+<div class="tabs" role="tablist"><button role="tab" data-tab="t1">1. Target</button><button role="tab" data-tab="t2">2. Dana terkumpul</button><button role="tab" data-tab="t3">3. Pembayaran</button></div>
+<div id="t1" class="tab">
 <div class="card">
  <div class="set">
   <div><label class="f" for="target">Target anggaran (Rp)</label><input id="target" type="number" min="0" inputmode="numeric"></div>
@@ -76,6 +84,17 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
  <div id="diff"></div>
 </div>
 
+<div id="cats"></div>
+
+<div class="acts">
+ <button class="p" data-act="ac">+ Tambah kategori</button>
+ <button data-act="copy">Salin ke spreadsheet</button>
+ <button data-act="csv">Unduh CSV</button>
+ <button data-act="reset">Mulai ulang</button>
+</div>
+<p class="sub" style="margin-top:14px">Centang "tamu" pada item seperti katering atau suvenir agar volumenya otomatis mengikuti jumlah tamu.</p>
+</div>
+<div id="t2" class="tab" hidden>
 <div class="card" style="margin-top:14px">
  <b style="font-size:18px">Dana terkumpul</b>
  <div class="sum" style="margin-top:10px">
@@ -88,20 +107,22 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
  <div id="dst" role="status" style="color:var(--mute);font-size:13px;margin-top:8px">Screenshot dibaca langsung di browser. Selalu periksa hasilnya sebelum dipakai.</div>
  <div class="tw" style="margin-top:8px"><table class="dn"><thead><tr><th style="width:140px">Tanggal</th><th>Dari</th><th style="width:150px">Nominal</th><th>Catatan</th><th></th></tr></thead><tbody id="dBody"></tbody></table></div>
 </div>
-<details class="card"><summary>Simpan otomatis ke Google Sheets</summary>
- <div class="sy"><div><label class="f" for="sUrl">URL Apps Script (akhiran /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
- <div><label class="f" for="sKey">Kata sandi</label><input id="sKey" type="password" autocomplete="off"></div></div>
- <div class="acts"><button class="p" id="conn">Hubungkan</button><button id="disc">Putuskan</button><button id="lnk">Salin tautan sambungan</button></div>
- <div id="sst" role="status">Belum terhubung. Perubahan hanya tersimpan di browser ini.</div></details>
-<div id="cats"></div>
-
-<div class="acts">
- <button class="p" data-act="ac">+ Tambah kategori</button>
- <button data-act="copy">Salin ke spreadsheet</button>
- <button data-act="csv">Unduh CSV</button>
- <button data-act="reset">Mulai ulang</button>
 </div>
-<p class="sub" style="margin-top:14px">Centang "tamu" pada item seperti katering atau suvenir agar volumenya otomatis mengikuti jumlah tamu.</p>
+<div id="t3" class="tab" hidden>
+<div class="card">
+ <b style="font-size:18px">Pembayaran target dari dana terkumpul</b>
+ <div class="sum" style="margin-top:10px">
+  <div><span>Dana terkumpul</span><b id="pDana"></b></div>
+  <div><span>Sudah dibayar</span><b id="pPaid"></b></div>
+  <div><span id="pSaldoL">Saldo dana</span><b id="pSaldo"></b></div>
+  <div><span>Sisa tagihan target</span><b id="pSisa"></b></div>
+ </div>
+ <div class="bar" id="pBar"><i></i></div>
+ <div id="pWarn" style="color:var(--bad);font-weight:600;margin-top:6px"></div>
+ <div class="acts"><button class="p" data-act="ab">+ Catat pembayaran</button></div>
+ <div class="tw" style="margin-top:8px"><table class="dn"><thead><tr><th style="width:140px">Tanggal</th><th>Untuk item target</th><th style="width:150px">Nominal</th><th>Catatan</th><th></th></tr></thead><tbody id="bBody"></tbody></table></div>
+</div>
+</div>
 </main>
 
 <dialog id="dlg">
@@ -116,7 +137,7 @@ const uid=()=>Math.random().toString(36).slice(2,8);
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const rp=n=>'Rp '+Math.round(n).toLocaleString('id-ID');
 const it=(u,pt,sat)=>({id:uid(),u,vol:1,sat:sat||'paket',harga:0,bayar:0,pt:!!pt});
-function seed(){return{target:0,tamu:100,cad:5,dana:[],cats:[
+function seed(){return{target:0,tamu:100,cad:5,dana:[],bay:[],cats:[
  {id:uid(),n:'Tempat & katering',items:[it('Sewa gedung / venue'),it('Katering',1,'porsi'),it('Sound system')]},
  {id:uid(),n:'Dekorasi',items:[it('Pelaminan & dekorasi'),it('Bunga')]},
  {id:uid(),n:'Busana & rias',items:[it('Busana pengantin'),it('Rias pengantin (MUA)'),it('Busana keluarga')]},
@@ -126,8 +147,10 @@ function seed(){return{target:0,tamu:100,cad:5,dana:[],cats:[
  {id:uid(),n:'Mahar & seserahan',items:[it('Mahar'),it('Seserahan')]},
  {id:uid(),n:'Administrasi & lain-lain',items:[it('Administrasi (KUA / penghulu)'),it('Transportasi'),it('Konsumsi panitia')]}]}}
 let S;try{S=JSON.parse(localStorage.getItem(K))}catch(e){}
-if(!S||!Array.isArray(S.cats))S=seed();S.dana=S.dana||[];
+if(!S||!Array.isArray(S.cats))S=seed();fix(S);
 const save=()=>{try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}queuePush()};
+function fix(st){st.dana=st.dana||[];st.bay=st.bay||[];const d=new Date().toISOString().slice(0,10);
+ st.cats.forEach(c=>c.items.forEach(i=>{if(i.bayar>0){st.bay.push({id:uid(),tgl:d,it:i.id,nom:i.bayar,cat:'dibayar sebelumnya'});i.bayar=0}}))}
 const find=(c,i)=>{const C=S.cats.find(x=>x.id===c);return i?C.items.find(x=>x.id===i):C};
 
 function row(c,i){
@@ -137,7 +160,7 @@ function row(c,i){
  <td style="width:80px"><input ${a} data-f="sat" value="${esc(i.sat)}" aria-label="Satuan"></td>
  <td style="width:130px"><input type="number" min="0" inputmode="numeric" ${a} data-f="harga" value="${i.harga}" aria-label="Harga satuan"></td>
  <td class="n" id="j_${c.id}_${i.id}" style="width:120px"></td>
- <td style="width:120px"><input type="number" min="0" inputmode="numeric" ${a} data-f="bayar" value="${i.bayar}" aria-label="Dibayar"></td>
+ <td class="n" id="b_${c.id}_${i.id}" style="width:120px"></td>
  <td class="n" id="s_${c.id}_${i.id}" style="width:120px"></td>
  <td style="white-space:nowrap"><label class="pt" title="Volume = jumlah tamu"><input type="checkbox" ${a} data-f="pt" ${i.pt?'checked':''}> tamu</label><button class="x" data-act="di" ${a} aria-label="Hapus item">✕</button></td></tr>`;
 }
@@ -145,18 +168,21 @@ function render(){
  $('#cats').innerHTML=S.cats.map(c=>`<section class="cat"><div class="ch"><input class="cn" data-cn="${c.id}" value="${esc(c.n)}" aria-label="Nama kategori"><span class="ctot">Subtotal <b id="ct_${c.id}"></b></span><button class="x" data-act="dc" data-c="${c.id}" aria-label="Hapus kategori">✕</button></div>
  <div class="tw"><table><thead><tr><th>Uraian</th><th>Vol</th><th>Satuan</th><th>Harga satuan</th><th style="text-align:right">Jumlah</th><th>Dibayar</th><th style="text-align:right">Sisa</th><th></th></tr></thead><tbody>${c.items.map(i=>row(c,i)).join('')}</tbody></table></div>
  <button class="add" data-act="ai" data-c="${c.id}">+ Tambah item</button></section>`).join('');
- renderDana();calc();
+ renderDana();renderBay();calc();
 }
 const set=(id,t)=>{const e=document.getElementById(id);if(e)e.textContent=t};
 function calc(){
- let sub=0,paid=0;
- S.cats.forEach(c=>{let ct=0;c.items.forEach(i=>{const j=(i.pt?S.tamu:i.vol)*i.harga;ct+=j;paid+=i.bayar;
-  set(`j_${c.id}_${i.id}`,rp(j));set(`s_${c.id}_${i.id}`,rp(j-i.bayar))});set('ct_'+c.id,rp(ct));sub+=ct});
+ let sub=0;const pm=pmap(),paid=S.bay.reduce((a,p)=>a+p.nom,0);
+ S.cats.forEach(c=>{let ct=0;c.items.forEach(i=>{const j=(i.pt?S.tamu:i.vol)*i.harga,b=pm[i.id]||0;ct+=j;
+  set(`j_${c.id}_${i.id}`,rp(j));set(`b_${c.id}_${i.id}`,rp(b));set(`s_${c.id}_${i.id}`,rp(j-b))});set('ct_'+c.id,rp(ct));sub+=ct});
  const cad=sub*S.cad/100,tot=sub+cad;
  set('sSub',rp(sub));set('sCad',rp(cad));set('sTot',rp(tot));set('sPaid',rp(paid));set('sRem',rp(tot-paid));
  const got=S.dana.reduce((a,x)=>a+x.nom,0),gap=tot-got;
  set('dTot',rp(got));set('dGap',rp(Math.abs(gap)));set('dGapL',gap>0?'Kekurangan dana':'Kelebihan dana');
  $('#dBar i').style.width=(tot>0?Math.min(100,got/tot*100):0)+'%';
+ const saldo=got-paid;set('pDana',rp(got));set('pPaid',rp(paid));set('pSaldo',rp(Math.abs(saldo)));set('pSaldoL',saldo>=0?'Saldo dana':'Dana kurang');set('pSisa',rp(Math.max(0,tot-paid)));
+ $('#pBar i').style.width=(tot>0?Math.min(100,paid/tot*100):0)+'%';
+ $('#pWarn').textContent=saldo<0?'Total pembayaran melebihi dana terkumpul sebesar '+rp(-saldo)+'. Pastikan sisanya dibayar dari dana lain.':'';
  const T=S.target,over=T>0&&tot>T;
  $('#bar').classList.toggle('over',over);
  $('#bar i').style.width=(T>0?Math.min(100,tot/T*100):0)+'%';
@@ -166,6 +192,7 @@ function calc(){
 }
 document.addEventListener('input',e=>{
  const t=e.target,d=t.dataset;
+ if(d.bf){const x=S.bay.find(y=>y.id===d.b);x[d.bf]=d.bf==='nom'?Math.max(0,+t.value||0):t.value;calc();save();return}
  if(d.df){const x=S.dana.find(y=>y.id===d.d);x[d.df]=d.df==='nom'?Math.max(0,+t.value||0):t.value;x.cek=false;const b=t.closest('tr').querySelector('.bd');if(b)b.remove();calc();save();return}
  if(d.cn){find(d.cn).n=t.value;save();return}
  if(d.f){const x=find(d.c,d.i);
@@ -179,18 +206,21 @@ document.addEventListener('input',e=>{
  calc();save();
 });
 function rows(){const r=[['Kategori','Uraian','Volume','Satuan','Harga satuan','Jumlah','Dibayar','Sisa']];
- S.cats.forEach(c=>c.items.forEach(i=>{const v=i.pt?S.tamu:i.vol,j=v*i.harga;r.push([c.n,i.u,v,i.sat,i.harga,j,i.bayar,j-i.bayar])}));
+ S.cats.forEach(c=>c.items.forEach(i=>{const v=i.pt?S.tamu:i.vol,j=v*i.harga,b=pmap()[i.id]||0;r.push([c.n,i.u,v,i.sat,i.harga,j,b,j-b])}));
  const t=calc();r.push([],['','Dana tak terduga ('+S.cad+'%)','','','',Math.round(t.cad)],['','TOTAL RENCANA','','','',Math.round(t.tot),t.paid,Math.round(t.tot-t.paid)]);
  const gt=S.dana.reduce((a,x)=>a+x.nom,0);r.push([],['DANA TERKUMPUL'],['Tanggal','Dari','Catatan','','','Nominal']);
- S.dana.forEach(x=>r.push([x.tgl,x.dari,x.cat,'','',x.nom]));r.push(['','TOTAL TERKUMPUL','','','',gt],['','KEKURANGAN DANA','','','',Math.round(t.tot-gt)]);return r}
+ S.dana.forEach(x=>r.push([x.tgl,x.dari,x.cat,'','',x.nom]));r.push(['','TOTAL TERKUMPUL','','','',gt],['','KEKURANGAN DANA','','','',Math.round(t.tot-gt)]);
+ r.push([],['PEMBAYARAN DARI DANA TERKUMPUL'],['Tanggal','Item','Catatan','','','Nominal']);S.bay.forEach(p=>r.push([p.tgl,itemLabel(p.it),p.cat,'','',p.nom]));r.push(['','TOTAL DIBAYAR','','','',t.paid],['','SALDO DANA','','','',gt-t.paid]);return r}
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-act]');if(!b)return;
  const a=b.dataset.act,c=b.dataset.c;
  if(a==='ai'){find(c).items.push(it('Item baru'));render()}
- else if(a==='di'){const C=find(c);C.items=C.items.filter(x=>x.id!==b.dataset.i);render()}
- else if(a==='dc'){if(confirm('Hapus kategori ini beserta isinya?')){S.cats=S.cats.filter(x=>x.id!==c);render()}}
+ else if(a==='di'){if(S.bay.some(p=>p.it===b.dataset.i)&&!confirm('Item ini punya catatan pembayaran. Hapus item beserta pembayarannya?'))return;const C=find(c);C.items=C.items.filter(x=>x.id!==b.dataset.i);S.bay=S.bay.filter(p=>p.it!==b.dataset.i);render()}
+ else if(a==='dc'){if(confirm('Hapus kategori ini beserta isinya?')){const C=find(c);S.bay=S.bay.filter(p=>!C.items.some(x=>x.id===p.it));S.cats=S.cats.filter(x=>x.id!==c);render()}}
  else if(a==='ad'){S.dana.push({id:uid(),tgl:today(),dari:'',nom:0,cat:'',cek:false});render()}
  else if(a==='dd'){S.dana=S.dana.filter(x=>x.id!==b.dataset.d);render()}
+ else if(a==='ab'){S.bay.push({id:uid(),tgl:today(),it:'',nom:0,cat:''});render()}
+ else if(a==='db'){S.bay=S.bay.filter(x=>x.id!==b.dataset.b);render()}
  else if(a==='shot'){$('#shot').click()}
  else if(a==='ac'){S.cats.push({id:uid(),n:'Kategori baru',items:[it('Item baru')]});render()}
  else if(a==='reset'){if(confirm('Hapus semua data dan mulai ulang?')){S=seed();init();render()}}
@@ -204,6 +234,22 @@ $('#cp').onclick=async()=>{const t=$('#tsv');t.select();try{await navigator.clip
 $('#cl').onclick=()=>{$('#dlg').close();$('#cp').textContent='Salin'};
 function init(){$('#target').value=S.target||'';$('#tamu').value=S.tamu;$('#cad').value=S.cad}
 init();render();
+
+/* ---- pembayaran dari dana + tab ---- */
+function pmap(){const m={};S.bay.forEach(p=>{if(p.it)m[p.it]=(m[p.it]||0)+p.nom});return m}
+function itemLabel(id){for(const c of S.cats){const i=c.items.find(x=>x.id===id);if(i)return c.n+' - '+i.u}return '(belum dipilih)'}
+function renderBay(){
+ const opts=S.cats.map(c=>`<optgroup label="${esc(c.n)}">${c.items.map(i=>`<option value="${i.id}">${esc(i.u)}</option>`).join('')}</optgroup>`).join('');
+ $('#bBody').innerHTML=S.bay.map(x=>{const a=`data-b="${x.id}"`;return `<tr><td><input type="date" ${a} data-bf="tgl" value="${esc(x.tgl)}" aria-label="Tanggal"></td>
+ <td><select ${a} data-bf="it" aria-label="Untuk item"><option value="">Pilih item…</option>${opts.replace(`value="${x.it}"`,`value="${x.it}" selected`)}</select></td>
+ <td><input type="number" min="0" inputmode="numeric" ${a} data-bf="nom" value="${x.nom}" aria-label="Nominal"></td>
+ <td><input ${a} data-bf="cat" value="${esc(x.cat)}" aria-label="Catatan"></td>
+ <td><button class="x" data-act="db" ${a} aria-label="Hapus">✕</button></td></tr>`}).join('')}
+function tab(n){['t1','t2','t3'].forEach(k=>{$('#'+k).hidden=k!==n});
+ document.querySelectorAll('.tabs button').forEach(b=>b.setAttribute('aria-selected',b.dataset.tab===n));
+ if(n==='t3')renderBay();try{sessionStorage.setItem('rab-tab',n)}catch(e){}}
+document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>tab(b.dataset.tab));
+{let n='t1';try{n=sessionStorage.getItem('rab-tab')||'t1'}catch(e){}tab(['t1','t2','t3'].includes(n)?n:'t1')}
 
 /* ---- dana terkumpul + baca screenshot ---- */
 const today=()=>new Date(Date.now()-new Date().getTimezoneOffset()*6e4).toISOString().slice(0,10);
@@ -247,7 +293,7 @@ async function push(){try{
  const j=await r.json();stat(j.ok?'Tersimpan ke spreadsheet pukul '+jam():'Gagal: kata sandi salah.')
 }catch(e){stat('Gagal tersambung. Cek URL dan koneksi internet.')}}
 const pull=async()=>(await fetch(SY.url+'?key='+encodeURIComponent(SY.key))).json();
-function adopt(st){S=st;S.dana=S.dana||[];try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}init();render()}
+function adopt(st){S=st;fix(S);try{localStorage.setItem(K,JSON.stringify(S))}catch(e){}init();render()}
 $('#conn').onclick=async()=>{
  const url=$('#sUrl').value.trim(),key=$('#sKey').value;
  if(!/^https:\/\/script\.google\.com\//.test(url)){stat('URL harus diawali https://script.google.com/');return}
