@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Undangan Pernikahan</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,700;1,500&family=Jost:wght@400;500&display=swap">
+<style>
+:root{--bg:#eef2ec;--panel:#f8faf6;--ink:#1f3b2d;--mute:#5b6f63;--line:#c9d6cb;--acc:#a8566b;--accfg:#fff;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0f1c15;--panel:#16271e;--ink:#e4eee6;--mute:#93a99a;--line:#2a4034;--acc:#e08ba0;--accfg:#2a0f18}}
+:root[data-theme="dark"]{--bg:#0f1c15;--panel:#16271e;--ink:#e4eee6;--mute:#93a99a;--line:#2a4034;--acc:#e08ba0;--accfg:#2a0f18}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.6 Jost,system-ui,sans-serif;text-align:center}
+body.lock{overflow:hidden}
+h1,h2,.serif{font-family:"Cormorant Garamond",Georgia,serif;font-weight:700;margin:0}
+section{max-width:560px;margin:0 auto;padding:56px 22px}
+.names{font-size:clamp(52px,16vw,96px);line-height:.95;letter-spacing:-.01em}
+.amp{display:block;font-style:italic;font-weight:500;font-size:.5em;color:var(--acc);margin:6px 0}
+.date{margin-top:20px;font-size:18px;color:var(--mute)}
+.kpd{margin-top:36px;color:var(--mute)}
+.kpd b{display:block;font:700 26px "Cormorant Garamond",serif;color:var(--ink);margin-top:2px}
+h2{font-size:34px;margin-bottom:6px}
+.lead{color:var(--mute);margin:0 0 28px}
+.cd{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:0 auto}
+.cd div{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 4px}
+.cd b{display:block;font:700 34px/1 "Cormorant Garamond",serif}
+.cd span{font-size:13px;color:var(--mute)}
+.ev{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:22px 18px;margin-bottom:14px}
+.ev h3{font:700 26px "Cormorant Garamond",serif;margin:0 0 4px}
+.ev p{margin:2px 0;color:var(--mute)}
+.ev .t{color:var(--ink);font-weight:500}
+a.btn,button.btn{display:inline-block;font:500 15px Jost,sans-serif;text-decoration:none;border:0;border-radius:999px;padding:11px 24px;background:var(--acc);color:var(--accfg);cursor:pointer;margin-top:14px}
+a.btn.ghost,button.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line)}
+a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+form{text-align:left;display:grid;gap:14px}
+label{font-weight:500;display:block;margin-bottom:4px}
+input,select,textarea{width:100%;font:inherit;padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--ink)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+form .btn{justify-self:center;margin-top:6px}
+.cover{position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg);padding:24px;transition:opacity .6s,visibility .6s}
+.cover.off{opacity:0;visibility:hidden}
+.pre{color:var(--mute)}
+.foot{color:var(--mute);font-size:14px;padding-bottom:72px}
+.mus{position:fixed;right:14px;bottom:calc(14px + env(safe-area-inset-bottom,0px));z-index:5;width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;cursor:pointer;display:none}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;scroll-behavior:auto!important}}
+</style>
+</head>
+<body class="lock">
+
+<div class="cover" id="cover">
+ <div class="pre">Undangan Pernikahan</div>
+ <h1 class="names" id="cvNames" style="margin:14px 0"></h1>
+ <div class="kpd">Kepada Yth.<b id="tamu">Bapak/Ibu/Saudara/i</b></div>
+ <button class="btn" id="open">Buka undangan</button>
+</div>
+
+<section id="hero" style="padding-top:72px">
+ <div class="pre">Kami mengundang Anda untuk hadir di hari bahagia kami</div>
+ <h1 class="names" id="hNames" style="margin-top:14px"></h1>
+ <div class="date" id="hDate"></div>
+</section>
+
+<section>
+ <h2>Menuju hari bahagia</h2>
+ <p class="lead">Hitung mundur</p>
+ <div class="cd" aria-live="off">
+  <div><b id="d">0</b><span>hari</span></div><div><b id="h">0</b><span>jam</span></div>
+  <div><b id="m">0</b><span>menit</span></div><div><b id="s">0</b><span>detik</span></div>
+ </div>
+</section>
+
+<section>
+ <h2>Acara</h2>
+ <p class="lead">Mohon hadir sesuai waktu berikut</p>
+ <div id="events"></div>
+</section>
+
+<section>
+ <h2>Konfirmasi kehadiran</h2>
+ <p class="lead">Jawaban Anda akan terkirim lewat WhatsApp</p>
+ <form id="rsvp">
+  <div><label for="nm">Nama</label><input id="nm" required autocomplete="name"></div>
+  <div class="row">
+   <div><label for="st">Kehadiran</label><select id="st"><option>Hadir</option><option>Tidak hadir</option></select></div>
+   <div><label for="jml">Jumlah tamu</label><input id="jml" type="number" min="1" max="10" value="1"></div>
+  </div>
+  <div><label for="ps">Ucapan (opsional)</label><textarea id="ps" rows="3"></textarea></div>
+  <button class="btn" type="submit">Kirim konfirmasi</button>
+ </form>
+</section>
+
+<section class="foot">
+ <p class="serif" style="font-size:24px;margin:0 0 6px" id="fNames"></p>
+ <p>Terima kasih atas doa dan kehadiran Anda.</p>
+</section>
+
+<button class="mus" id="mus" aria-label="Putar atau jeda musik">♪</button>
+<audio id="aud" loop></audio>
+
+<script>
+/* ====== UBAH DATA DI SINI ====== */
+const DATA={
+ mempelai1:"Eva mustika", mempelai2:"Ryan Ardiansyah",
+ tanggal:"2027-07-17T08:00:00+07:00",      // waktu mulai acara (ISO, zona WIB)
+ wa:"6281357742755",                        // nomor WhatsApp penerima RSVP, awali 62
+ musik:"lagu.mp3",                                  // isi URL file mp3 jika ada, kosong = tanpa musik
+ acara:[
+  {nama:"Akad nikah",  waktu:"Sabtu, 17 Juli 2027 · 08.00 WIB", tempat:"Masjidil Haram", alamat:"Al Haram, Makkah 24231, Arab Saudi", peta:"https://maps.app.goo.gl/u6zsFLaRwy9cGhqT9"},
+  {nama:"Resepsi",     waktu:"Sabtu, 17 Juli 2027  · 11.00 – 14.00 WIB", tempat:"Masjidil Haram", alamat:"Al Haram, Makkah 24231, Arab Saudi", peta:"https://maps.app.goo.gl/u6zsFLaRwy9cGhqT9"}
+ ]
+};
+/* ================================ */
+const $=id=>document.getElementById(id);
+const tgl=new Date(DATA.tanggal);
+const names=`${DATA.mempelai1}<span class="amp">&amp;</span>${DATA.mempelai2}`;
+['cvNames','hNames'].forEach(i=>$(i).innerHTML=names);
+$('fNames').textContent=`${DATA.mempelai1} & ${DATA.mempelai2}`;
+$('hDate').textContent=tgl.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long',year:'numeric',timeZone:'Asia/Jakarta'});
+document.title=`Undangan ${DATA.mempelai1} & ${DATA.mempelai2}`;
+
+const tamu=new URLSearchParams(location.search).get('to');
+if(tamu){$('tamu').textContent=tamu;$('nm').value=tamu;}
+
+DATA.acara.forEach(a=>{
+ const d=document.createElement('div');d.className='ev';
+ const h=document.createElement('h3');h.textContent=a.nama;
+ const w=document.createElement('p');w.className='t';w.textContent=a.waktu;
+ const t=document.createElement('p');t.textContent=a.tempat;
+ const al=document.createElement('p');al.textContent=a.alamat;
+ const l=document.createElement('a');l.className='btn ghost';l.textContent='Buka peta';l.href=a.peta;l.target='_blank';l.rel='noopener';
+ d.append(h,w,t,al,l);$('events').append(d);
+});
+
+function tick(){
+ let s=Math.max(0,Math.floor((tgl-Date.now())/1000));
+ $('d').textContent=Math.floor(s/86400);
+ $('h').textContent=Math.floor(s%86400/3600);
+ $('m').textContent=Math.floor(s%3600/60);
+ $('s').textContent=s%60;
+}
+tick();setInterval(tick,1000);
+
+const aud=$('aud'),mus=$('mus');
+if(DATA.musik){aud.src=DATA.musik;mus.style.display='block';}
+mus.onclick=()=>{aud.paused?aud.play().catch(()=>{}):aud.pause();};
+
+$('open').onclick=()=>{
+ $('cover').classList.add('off');document.body.classList.remove('lock');
+ if(DATA.musik)aud.play().catch(()=>{});
+ scrollTo(0,0);
+};
+
+$('rsvp').onsubmit=e=>{
+ e.preventDefault();
+ const p=$('ps').value.trim();
+ const teks=`Halo, saya ${$('nm').value.trim()}.\nKonfirmasi: ${$('st').value}`+
+  ($('st').value==='Hadir'?` (${$('jml').value} orang)`:'')+(p?`\nUcapan: ${p}`:'');
+ location.href=`https://wa.me/${DATA.wa}?text=${encodeURIComponent(teks)}`;
+};
+</script>
+</body>
+</html>
