@@ -91,7 +91,7 @@ textarea{width:100%;height:220px;font:12px/1.4 ui-monospace,monospace;background
 <details class="card"><summary>Simpan otomatis ke Google Sheets</summary>
  <div class="sy"><div><label class="f" for="sUrl">URL Apps Script (akhiran /exec)</label><input id="sUrl" placeholder="https://script.google.com/macros/s/.../exec"></div>
  <div><label class="f" for="sKey">Kata sandi</label><input id="sKey" type="password" autocomplete="off"></div></div>
- <div class="acts"><button class="p" id="conn">Hubungkan</button><button id="disc">Putuskan</button></div>
+ <div class="acts"><button class="p" id="conn">Hubungkan</button><button id="disc">Putuskan</button><button id="lnk">Salin tautan sambungan</button></div>
  <div id="sst" role="status">Belum terhubung. Perubahan hanya tersimpan di browser ini.</div></details>
 <div id="cats"></div>
 
@@ -237,6 +237,7 @@ $('#shot').onchange=async e=>{
 };
 
 /* ---- sinkron Google Sheets (Apps Script) ---- */
+const DEFAULT_URL='https://script.google.com/macros/s/AKfycbyJrn-06rsdn2JRbszNUmpePlwiP0p58SgLHp6kbRrApZhNqfcjVaw4kwf33RbbqIDb/exec';
 let SY={},tm;try{SY=JSON.parse(localStorage.getItem('rab-sync'))||{}}catch(e){}
 const stat=t=>{$('#sst').textContent=t};
 const jam=()=>new Date().toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'});
@@ -259,6 +260,12 @@ $('#conn').onclick=async()=>{
  }catch(e){SY={};stat('Gagal tersambung. Pastikan URL benar dan akses diatur "Anyone".')}
 };
 $('#disc').onclick=()=>{SY={};try{localStorage.removeItem('rab-sync')}catch(e){}stat('Terputus. Data hanya tersimpan di browser ini.')};
+const hm=location.hash.match(/^#s=(.+)$/);
+if(hm){try{const o=JSON.parse(decodeURIComponent(atob(hm[1])));if(o.u){SY={url:o.u,key:o.k||''};localStorage.setItem('rab-sync',JSON.stringify(SY))}}catch(e){}history.replaceState(null,'',location.pathname+location.search)}
+$('#lnk').onclick=async()=>{if(!SY.url){stat('Hubungkan dulu, baru tautannya bisa disalin.');return}
+ const l=location.origin+location.pathname+'#s='+btoa(encodeURIComponent(JSON.stringify({u:SY.url,k:SY.key})));
+ try{await navigator.clipboard.writeText(l);stat('Tautan disalin. Buka di perangkat lain untuk tersambung otomatis. Jangan dibagikan ke sembarang orang.')}catch(e){prompt('Salin tautan ini:',l)}};
+$('#sUrl').value=DEFAULT_URL;
 if(SY.url){$('#sUrl').value=SY.url;$('#sKey').value=SY.key||'';stat('Memuat dari spreadsheet…');
  pull().then(j=>{if(j.state&&j.state.cats){adopt(j.state);stat('Terhubung. Data dimuat dari spreadsheet pukul '+jam())}else stat('Terhubung.')}).catch(()=>stat('Gagal memuat dari spreadsheet.'))}
 </script>
